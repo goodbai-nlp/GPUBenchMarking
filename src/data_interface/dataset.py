@@ -233,7 +233,11 @@ class PromptRawDataset(object):
         self.local_rank = local_rank
         # self.eos_token = "<|endoftext|>"
         self.eos_token = eos_token
-        self.raw_datasets = load_dataset(data_path)
+        try:
+            self.raw_datasets = load_dataset(data_path)
+        except:
+            print(f"Invalid dataset path: {data_path}")
+            exit()
 
     def get_train_data(self):
         return

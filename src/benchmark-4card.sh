@@ -1,11 +1,12 @@
 export CUDA_VISIBLE_DEVICES=0,1,2,3
-export CUDA_HOME=/mnt/data/hpc/support/cuda_11.8.0
+export CUDA_HOME=/usr/local/cuda-11.8/
 export NCCL_P2P_DISABLE=1
 
 ProjectDir=$(cd $(dirname $0);cd ..; pwd)
-BasePath=/mnt/data/home/usera6k10
+#BasePath=/mnt/data/home/usera6k10
+BasePath=/home/ubuntu/gpu-test
 
-ModelCate=gpt2-xl
+ModelCate=llama2-7b
 MODEL=${BasePath}/data/pretrained-models/${ModelCate}
 
 DataPath=${ProjectDir}/data

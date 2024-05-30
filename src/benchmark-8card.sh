@@ -1,12 +1,12 @@
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-#export CUDA_HOME=/mnt/data/hpc/support/cuda_11.8.0
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_HOME=/usr/local/cuda-11.8/
 export NCCL_P2P_DISABLE=1
 
 ProjectDir=$(cd $(dirname $0);cd ..; pwd)
 #BasePath=/mnt/data/home/usera6k10
 BasePath=/home/ubuntu/gpu-test
 
-ModelCate=gpt2-xl
+ModelCate=llama2-7b
 MODEL=${BasePath}/data/pretrained-models/${ModelCate}
 
 DataPath=${ProjectDir}/data
@@ -15,8 +15,14 @@ DataSetName=trucated-pubmedqa
 export HF_DATASETS_CACHE=${DataPath}/${DataSetName}/.cache
 
 lr=2e-5
+MODEL_SIZE=7B
+NUM_GPUS=8
+BATCH_SIZE_PER_GPU=1
+TOTAL_BATCH_SIZE=32
+GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
+echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
 
-OUTPUT_DIR=${ProjectDir}/output/exp.InstructTuning/Finetune-${DataSetName}-${ModelCate}-GenMode-lr-${lr}-totalbsz128-decay0.1-3epoch
+OUTPUT_DIR=${ProjectDir}/output/exp.InstructTuning/Finetune-${DataSetName}-${ModelCate}-GenMode-${NUM_GPUS}GPU-lr-${lr}-totalbsz${TOTAL_BATCH_SIZE}-decay0.1-3epoch
 
 if [ ! -d ${OUTPUT_DIR} ];then
   mkdir -p ${OUTPUT_DIR}
@@ -29,16 +35,8 @@ else
   esac
 fi
 
-MODEL_SIZE=1.5B
-NUM_GPUS=4
-# NUM_GPUS=2
-BATCH_SIZE_PER_GPU=8
-TOTAL_BATCH_SIZE=32
-GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
-echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
-
 deepspeed benchmark.py \
-    --deepspeed ds_configs/stage1_no_offloading.conf \
+    --deepspeed ds_configs/stage2_no_offloading.conf \
     --data_path ${DataPath}/${DataSetName} \
     --model_name_or_path ${MODEL} \
     --tokenizer_name ${MODEL} \
@@ -68,5 +66,5 @@ deepspeed benchmark.py \
     --tf32 True \
     --overwrite_output_dir \
     --preprocessing_num_workers 1 \
-    --data_cache_dir ${DataPath}/${DataSetName}/.cache-gptxl \
+    --data_cache_dir ${DataPath}/${DataSetName}/.cache-llama \
     --report_to "tensorboard" 2>&1 | tee ${OUTPUT_DIR}/training.log
