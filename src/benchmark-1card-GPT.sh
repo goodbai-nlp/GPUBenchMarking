@@ -1,13 +1,11 @@
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-#export CUDA_HOME=/usr/local/cuda-11.8/
+export CUDA_VISIBLE_DEVICES=0
 export NCCL_P2P_DISABLE=1
 
 ProjectDir=$(cd $(dirname $0);cd ..; pwd)
-
 BasePath=/mnt/data/home/usera6k10
 #BasePath=/home/ubuntu/gpu-test
 
-ModelCate=llama2-7b
+ModelCate=gpt2-xl
 MODEL=${BasePath}/data/pretrained-models/${ModelCate}
 
 DataPath=${ProjectDir}/data
@@ -16,10 +14,10 @@ DataSetName=trucated-pubmedqa
 export HF_DATASETS_CACHE=${DataPath}/${DataSetName}/.cache
 
 lr=2e-5
-MODEL_SIZE=7B
-NUM_GPUS=4
-BATCH_SIZE_PER_GPU=1
-TOTAL_BATCH_SIZE=4
+MODEL_SIZE=1.5B
+NUM_GPUS=1
+BATCH_SIZE_PER_GPU=8
+TOTAL_BATCH_SIZE=32
 GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
 echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
 
@@ -37,7 +35,7 @@ else
 fi
 
 deepspeed benchmark.py \
-    --deepspeed ds_configs/stage3_no_offloading.conf \
+    --deepspeed ds_configs/stage1_no_offloading.conf \
     --data_path ${DataPath}/${DataSetName} \
     --model_name_or_path ${MODEL} \
     --tokenizer_name ${MODEL} \
@@ -67,5 +65,5 @@ deepspeed benchmark.py \
     --tf32 True \
     --overwrite_output_dir \
     --preprocessing_num_workers 1 \
-    --data_cache_dir ${DataPath}/${DataSetName}/.cache-llama \
+    --data_cache_dir ${DataPath}/${DataSetName}/.cache-gptxl \
     --report_to "tensorboard" 2>&1 | tee ${OUTPUT_DIR}/training.log

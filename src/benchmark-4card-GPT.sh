@@ -1,10 +1,11 @@
 export CUDA_VISIBLE_DEVICES=0,1,2,3
-#export CUDA_HOME=/mnt/data/hpc/support/cuda_11.8.0
+
+export CUDA_HOME=/mnt/data/hpc/support/cuda_11.8.0
 export NCCL_P2P_DISABLE=1
 
 ProjectDir=$(cd $(dirname $0);cd ..; pwd)
-#BasePath=/mnt/data/home/usera6k10
-BasePath=/home/ubuntu/gpu-test
+BasePath=/mnt/data/home/usera6k10
+#BasePath=/home/ubuntu/gpu-test
 
 ModelCate=gpt2-xl
 MODEL=${BasePath}/data/pretrained-models/${ModelCate}
@@ -15,8 +16,14 @@ DataSetName=trucated-pubmedqa
 export HF_DATASETS_CACHE=${DataPath}/${DataSetName}/.cache
 
 lr=2e-5
+MODEL_SIZE=1.5B
+NUM_GPUS=4
+BATCH_SIZE_PER_GPU=8
+TOTAL_BATCH_SIZE=32
+GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
+echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
 
-OUTPUT_DIR=${ProjectDir}/output/exp.InstructTuning/Finetune-${DataSetName}-${ModelCate}-GenMode-lr-${lr}-totalbsz128-decay0.1-3epoch
+OUTPUT_DIR=${ProjectDir}/output/exp.InstructTuning/Finetune-${DataSetName}-${ModelCate}-GenMode-${NUM_GPUS}GPU-lr-${lr}-totalbsz${TOTAL_BATCH_SIZE}-decay0.1-3epoch
 
 if [ ! -d ${OUTPUT_DIR} ];then
   mkdir -p ${OUTPUT_DIR}
@@ -29,13 +36,6 @@ else
   esac
 fi
 
-MODEL_SIZE=1.5B
-NUM_GPUS=4
-# NUM_GPUS=2
-BATCH_SIZE_PER_GPU=8
-TOTAL_BATCH_SIZE=32
-GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
-echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
 
 deepspeed benchmark.py \
     --deepspeed ds_configs/stage1_no_offloading.conf \
